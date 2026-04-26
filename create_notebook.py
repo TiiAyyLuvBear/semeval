@@ -307,5 +307,5 @@ out_path = os.path.join(os.path.dirname(__file__) or ".", "pipeline.ipynb")
 with open(out_path, "w", encoding="utf-8") as f:
     json.dump(notebook, f, indent=1, ensure_ascii=False)
 
-print(f"✓ Notebook tạo thành công: {out_path}")
-print(f"  Số cells: {len(CELLS)}")
+print(f"[OK] Notebook created: {out_path}")
+print(f"  Cells: {len(CELLS)}")
