@@ -1,6 +1,4 @@
-"""
-requirements.txt — Dependencies cho toàn bộ pipeline
-"""
+# requirements.txt — Dependencies cho toàn bộ pipeline
 # Core ML
 torch>=2.1.0
 transformers>=4.40.0
