@@ -54,7 +54,13 @@ def blend_probas(
         weights = {n: 1.0 for n in names}
 
     total_w = sum(weights[n] for n in names)
-    blend = np.zeros(len(next(iter(proba_dict.values()))))
+    # Verify shapes
+    lengths = {name: len(arr) for name, arr in proba_dict.items()}
+    if len(set(lengths.values())) > 1:
+        raise ValueError(f"Mismatched prediction lengths: {lengths}. "
+                         "All models must be evaluated on the same data subset.")
+
+    blend = np.zeros(next(iter(lengths.values())))
 
     for name in names:
         p = rank_normalize(proba_dict[name]) if use_rank else proba_dict[name]
@@ -95,6 +101,14 @@ def run_ensemble(
         "codebert": val_proba_codebert,
         "ifcnb":    val_proba_ifcnb,
     }
+
+    # Verify y_val shape matches probas
+    first_len = len(next(iter(proba_dict.values())))
+    if len(y_val) != first_len:
+        raise ValueError(
+            f"y_val length ({len(y_val)}) does not match prediction length ({first_len}). "
+            "Ensure y_val is loaded with the same sampling limit (max_val) as the models."
+        )
 
     best_f1, best_weights, best_tau = 0.0, None, 0.5
     weight_options = [0.5, 1.0, 1.5, 2.0]

@@ -70,7 +70,7 @@ def run_codebert(cfg: CFG) -> tuple[float, np.ndarray]:
 
     # ── 5. Evaluate toàn bộ val set ────────────────────────────────────────
     logger.info("Evaluate toàn bộ validation set...")
-    full_val_df = load_dataframe(cfg.val_data, None, "Full-Val", cfg.seed)
+    full_val_df = load_dataframe(cfg.val_data, cfg.max_val, "Val", cfg.seed)
     full_val_ds = build_hf_dataset(full_val_df, tokenizer, cfg.max_length)
 
     preds_out  = trainer.predict(full_val_ds)
