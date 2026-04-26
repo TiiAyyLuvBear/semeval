@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# HuggingFace / Torch checkpoints
+outputs/
+codebert_output/
+*/checkpoint-*/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Sklearn / joblib models
+*.pkl
+
+# NumPy arrays
+*.npy
+
+# Data files (lớn, không commit)
+data/
+*.parquet
+*.csv
+!outputs/submission*.csv
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Logs
+*.log
+logs/
+runs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
