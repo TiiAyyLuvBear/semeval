@@ -19,7 +19,7 @@ ENV = _detect_env()
 
 # ── Kaggle dataset slug — chỉnh thành tên dataset của bạn ─────────────────
 # Ví dụ: competition data ở /kaggle/input/semeval2026task13/
-KAGGLE_INPUT = "/kaggle/input/semeval2026task13"   # <- đổi slug này
+KAGGLE_INPUT = "/kaggle/input/competitions/sem-eval-2026-task-13-subtask-a/Task_A"   # <- đổi slug này
 
 
 @dataclass
