@@ -11,10 +11,6 @@ CELLS = [
     {
         "type": "markdown",
         "source": [
-            "# SemEval-2026 Task 13A — AI Code Detection Pipeline\n",
-            "> **Tác giả**: 25C11066  \n",
-            "> Mỗi cell gọi một module Python riêng biệt. Chỉ cần chỉnh `config.py`.\n",
-            "\n",
             "## Flow\n",
             "```\n",
             "0. Setup & Config\n",
@@ -23,7 +19,8 @@ CELLS = [
             "3. Train GBM Ensemble  (train_gbm.py)\n",
             "4. Fine-tune CodeBERT  (train_codebert.py)\n",
             "5. Train IF+CNB  (train_ifcnb.py)\n",
-            "6. Soft-Voting Ensemble  (ensemble.py)\n",
+            "6. Train TF-IDF Textual Specialist (train_tfidf.py)\n",
+            "7. Soft-Voting Ensemble  (ensemble.py)\n",
             "```"
         ]
     },
@@ -211,23 +208,44 @@ CELLS = [
             "print(f'val_proba_iflgbm: mean={val_proba_iflgbm.mean():.3f}')"
         ]
     },
-    # ── Cell 8: Ensemble ─────────────────────────────────────────────────
+    # ── Cell 8: Train TF-IDF ─────────────────────────────────────────────
     {
         "type": "markdown",
-        "source": ["## 6. Soft-Voting Ensemble\n",
-                   "Rank-normalize → weighted average → quantile threshold calibration.\n"]
+        "source": ["## 6. Train TF-IDF (Textual Specialist)\n",
+                   "Character n-grams (3-6) kết hợp Logistic Regression. Cực kỳ hiệu quả cho stylometry bề mặt.\n"]
     },
     {
         "type": "code",
         "source": [
-            "# Tạm thời tắt Ensemble\n",
-            "print('Bỏ qua Ensemble để tập trung tối ưu nhánh IF+LGBM.')\n"
+            "from train_tfidf import run_tfidf\n",
+            "\n",
+            "val_proba_tfidf = run_tfidf(train_df_full, val_df_full, cfg, test_df=test_df_full)\n",
+            "print(f'val_proba_tfidf: mean={val_proba_tfidf.mean():.3f}')"
         ]
     },
-    # ── Cell 9: Summary ──────────────────────────────────────────────────
+    # ── Cell 9: Ensemble ─────────────────────────────────────────────────
     {
         "type": "markdown",
-        "source": ["## 7. Tóm tắt kết quả\n"]
+        "source": ["## 7. Soft-Voting Ensemble & Language Routing\n",
+                   "Rank-normalize → weighted average → language routing → quantile threshold calibration.\n"]
+    },
+    {
+        "type": "code",
+        "source": [
+            "from ensemble import run_ensemble\n",
+            "\n",
+            "val_proba_ensemble = run_ensemble(\n",
+            "    val_proba_ifcnb=val_proba_iflgbm,\n",
+            "    val_proba_tfidf=val_proba_tfidf,\n",
+            "    y_val=val_df_full['label'].values,\n",
+            "    val_codes=val_df_full['code'],\n",
+            ")"
+        ]
+    },
+    # ── Cell 10: Summary ──────────────────────────────────────────────────
+    {
+        "type": "markdown",
+        "source": ["## 8. Tóm tắt kết quả\n"]
     },
     {
         "type": "code",
@@ -241,6 +259,8 @@ CELLS = [
             "\n",
             "results = {\n",
             "    'IF+LGBM':   val_proba_iflgbm,\n",
+            "    'TF-IDF':    val_proba_tfidf,\n",
+            "    'Ensemble':  val_proba_ensemble,\n",
             "}\n",
             "\n",
             "print('\\n' + '='*55)\n",

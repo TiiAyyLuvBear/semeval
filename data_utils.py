@@ -6,6 +6,7 @@ Exports:
     build_hf_dataset(df, tokenizer, max_length)   -> datasets.Dataset
 """
 import logging
+import re
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from datasets import Dataset
@@ -119,3 +120,56 @@ def load_test_dataset(
     ds = ds.map(tokenize_fn, batched=True, remove_columns=["code"])
     logger.info(f"  [Test] {len(ds):,} mẫu")
     return ds, test_ids
+
+
+# =============================================================================
+# PREPROCESSING FUNCTIONS (From Scientific Notebook)
+# =============================================================================
+
+def get_syntax_pattern(code_text: str) -> str:
+    """
+    Transforms source code into a syntax-oriented skeleton.
+    Masks strings, numbers, and replaces identifiers with <KW> or <ID> tokens.
+    """
+    if not isinstance(code_text, str) or len(code_text) == 0:
+        return ""
+
+    text = re.sub(r'"(?:[^"\\]|\\.)*"', " <STR> ", code_text)
+    text = re.sub(r"'(?:[^'\\]|\\.)*'", " <STR> ", text)
+    text = re.sub(r"\b\d+(?:\.\d+)?\b", " <NUM> ", text)
+
+    keywords = {'if','else','for','while','return','int','float','class','def',
+                'import','print','const','let','var','function','true','false',
+                'null','new','try','catch','public','private','protected'}
+
+    def replace_word(match):
+        word = match.group(0)
+        if word.lower() in keywords:
+            return " <KW> "
+        return " <ID> "
+
+    return re.sub(r"\b[A-Za-z_][A-Za-z0-9_]*\b", replace_word, text)
+
+
+def get_comment_block(code_text: str) -> str:
+    """
+    Extracts all comment blocks from the source code.
+    Supports single-line (//, #) and multi-line (/* */) comments.
+    """
+    if not isinstance(code_text, str) or len(code_text) == 0:
+        return ""
+
+    single_line = re.findall(r"(//.*?$|#.*?$)", code_text, re.MULTILINE)
+    multi_line = re.findall(r"/\*.*?\*/", code_text, re.DOTALL)
+    
+    all_comments = single_line + multi_line
+    return "\n".join(all_comments) if all_comments else "NO_COMMENT"
+
+
+def detect_language(code_text: str) -> str:
+    """Identifies the programming language using rule-based heuristics."""
+    code_text = str(code_text).lower()
+    if "<?php" in code_text or "echo " in code_text or "->" in code_text: return "php"
+    if "console.log" in code_text or "function()" in code_text or "let " in code_text: return "javascript"
+    if "public static void" in code_text or "using system" in code_text or "fmt.println" in code_text: return "javaish"
+    return "other"

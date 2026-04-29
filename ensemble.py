@@ -13,6 +13,7 @@ import pandas as pd
 from scipy.stats import rankdata
 
 from metrics import optimize_threshold, quantile_threshold, print_eval_report
+from data_utils import detect_language
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +70,54 @@ def blend_probas(
     return blend / total_w
 
 
+    return blend / total_w
+
+
 # =============================================================================
-# 3. Main ensemble function
+# 3. Apply Language Routing (Heuristic based on scientific notebook)
+# =============================================================================
+def apply_language_routing(proba: np.ndarray, codes: pd.Series) -> np.ndarray:
+    """
+    Điều chỉnh xác suất dựa trên ngôn ngữ:
+      - JavaScript: +5% AI signal (capping at 0.99)
+      - PHP: -5% AI signal (capping at 0.01)
+      - Java/C#: +2% AI signal
+    """
+    logger.info("Applying Language Routing heuristic...")
+    adjusted = proba.copy()
+    
+    try:
+        from tqdm import tqdm
+        it = tqdm(codes, desc="Language Routing")
+    except ImportError:
+        it = codes
+
+    for i, code in enumerate(it):
+        lang = detect_language(code)
+        if lang == 'javascript':
+            adjusted[i] = min(adjusted[i] * 1.05, 0.99)
+        elif lang == 'php':
+            adjusted[i] = max(adjusted[i] * 0.95, 0.01)
+        elif lang == 'javaish':
+            adjusted[i] = min(adjusted[i] * 1.02, 0.99)
+    return adjusted
+
+
+# =============================================================================
+# 4. Main ensemble function
 # =============================================================================
 def run_ensemble(
-    val_proba_gbm:     np.ndarray,
-    val_proba_codebert: np.ndarray,
-    val_proba_ifcnb:   np.ndarray,
-    y_val:             np.ndarray,
+    val_proba_gbm:     np.ndarray | None = None,
+    val_proba_codebert: np.ndarray | None = None,
+    val_proba_ifcnb:   np.ndarray | None = None,
+    val_proba_tfidf:   np.ndarray | None = None,
+    y_val:             np.ndarray = None,
+    val_codes:         pd.Series | None = None,
     test_proba_gbm:     np.ndarray | None = None,
     test_proba_codebert: np.ndarray | None = None,
     test_proba_ifcnb:   np.ndarray | None = None,
+    test_proba_tfidf:   np.ndarray | None = None,
+    test_codes:         pd.Series | None = None,
     test_ids:          list | None = None,
     output_dir:        str = "outputs",
     submission_out:    str = "outputs/submission_ensemble.csv",
@@ -96,11 +134,14 @@ def run_ensemble(
     # ── 1. Val: tìm trọng số tốt nhất ─────────────────────────────────────
     logger.info("Tối ưu ensemble weights trên val set...")
 
-    proba_dict = {
-        "gbm":      val_proba_gbm,
-        "codebert": val_proba_codebert,
-        "ifcnb":    val_proba_ifcnb,
-    }
+    proba_dict = {}
+    if val_proba_gbm is not None: proba_dict["gbm"] = val_proba_gbm
+    if val_proba_codebert is not None: proba_dict["codebert"] = val_proba_codebert
+    if val_proba_ifcnb is not None: proba_dict["ifcnb"] = val_proba_ifcnb
+    if val_proba_tfidf is not None: proba_dict["tfidf"] = val_proba_tfidf
+    
+    if len(proba_dict) == 0:
+        raise ValueError("Ít nhất một model probability phải được truyền vào.")
 
     # Verify y_val shape matches probas
     first_len = len(next(iter(proba_dict.values())))
@@ -114,9 +155,14 @@ def run_ensemble(
     weight_options = [0.5, 1.0, 1.5, 2.0]
 
     from itertools import product as ip
-    for combo in ip(weight_options, repeat=3):
+    for combo in ip(weight_options, repeat=len(proba_dict)):
         w = dict(zip(proba_dict.keys(), combo))
         blend = blend_probas(proba_dict, weights=w, use_rank=True)
+        
+        # Apply language routing on val to evaluate properly
+        if val_codes is not None:
+            blend = apply_language_routing(blend, val_codes)
+            
         tau, f1 = optimize_threshold(blend, y_val)
         if f1 > best_f1:
             best_f1, best_weights, best_tau = f1, w, tau
@@ -126,6 +172,9 @@ def run_ensemble(
 
     # ── 2. Val blend & report ──────────────────────────────────────────────
     val_blend  = blend_probas(proba_dict, weights=best_weights, use_rank=True)
+    if val_codes is not None:
+        val_blend = apply_language_routing(val_blend, val_codes)
+        
     y_pred_val = (val_blend >= best_tau).astype(int)
     print_eval_report(y_val, y_pred_val, val_blend, "Val (Ensemble cuối)")
 
@@ -139,14 +188,18 @@ def run_ensemble(
     print(f"  {'ensemble':12s}: Macro F1={best_f1:.4f}  (τ={best_tau:.3f})")
 
     # ── 4. Test inference ─────────────────────────────────────────────────
-    if all(p is not None for p in [test_proba_gbm, test_proba_codebert, test_proba_ifcnb]):
+    test_proba_dict = {}
+    if test_proba_gbm is not None: test_proba_dict["gbm"] = test_proba_gbm
+    if test_proba_codebert is not None: test_proba_dict["codebert"] = test_proba_codebert
+    if test_proba_ifcnb is not None: test_proba_dict["ifcnb"] = test_proba_ifcnb
+    if test_proba_tfidf is not None: test_proba_dict["tfidf"] = test_proba_tfidf
+    
+    if len(test_proba_dict) == len(proba_dict):
         logger.info("Blend test probabilities...")
-        test_proba_dict = {
-            "gbm":      test_proba_gbm,
-            "codebert": test_proba_codebert,
-            "ifcnb":    test_proba_ifcnb,
-        }
         test_blend = blend_probas(test_proba_dict, weights=best_weights, use_rank=True)
+        if test_codes is not None:
+            test_blend = apply_language_routing(test_blend, test_codes)
+            
         np.save(os.path.join(output_dir, "test_proba_ensemble.npy"), test_blend)
 
         # Primary: val-tuned threshold
