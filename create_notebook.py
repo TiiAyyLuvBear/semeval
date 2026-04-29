@@ -171,16 +171,9 @@ CELLS = [
     {
         "type": "code",
         "source": [
-            "from train_gbm import run_gbm\n",
-            "\n",
-            "gbm_tau, val_proba_gbm = run_gbm(\n",
-            "    train_feat_path = TRAIN_FEAT,\n",
-            "    val_feat_path   = VAL_FEAT,\n",
-            "    cfg             = cfg,\n",
-            "    test_feat_path  = TEST_FEAT,\n",
-            ")\n",
-            "print(f'GBM best τ = {gbm_tau:.3f}')\n",
-            "print(f'val_proba_gbm: mean={val_proba_gbm.mean():.3f}, std={val_proba_gbm.std():.3f}')"
+            "# Tạm thời tắt GBM\n",
+            "# from train_gbm import run_gbm\n",
+            "# gbm_tau, val_proba_gbm = run_gbm(train_feat_path=TRAIN_FEAT, val_feat_path=VAL_FEAT, cfg=cfg, test_feat_path=TEST_FEAT)\n"
         ]
     },
     # ── Cell 6: Fine-tune CodeBERT ───────────────────────────────────────
@@ -192,32 +185,30 @@ CELLS = [
     {
         "type": "code",
         "source": [
-            "from train_codebert import run_codebert\n",
-            "\n",
-            "codebert_tau, val_proba_codebert = run_codebert(cfg)\n",
-            "print(f'CodeBERT best τ = {codebert_tau:.3f}')\n",
-            "print(f'val_proba_codebert: mean={val_proba_codebert.mean():.3f}')"
+            "# Tạm thời tắt CodeBERT\n",
+            "# from train_codebert import run_codebert\n",
+            "# codebert_tau, val_proba_codebert = run_codebert(cfg)\n"
         ]
     },
     # ── Cell 7: Train IF+CNB ─────────────────────────────────────────────
     {
         "type": "markdown",
-        "source": ["## 5. Train IsolationForest + ComplementNB\n",
+        "source": ["## 5. Train IsolationForest + LightGBM\n",
                    "20 style-only features — ít bị OOD shift nhất.\n",
-                   "IF phát hiện code 'quá hoàn hảo' như outlier (ngôn ngữ-bất biến).\n"]
+                   "LightGBM phân loại dựa trên đặc trưng style để học tương tác phi tuyến.\n"]
     },
     {
         "type": "code",
         "source": [
-            "from train_ifcnb import run_ifcnb\n",
+            "from train_ifcnb import run_iflgbm\n",
             "from data_utils import load_dataframe\n",
             "\n",
             "train_df_full = load_dataframe(cfg.train_data, cfg.max_train, 'Train', cfg.seed)\n",
             "val_df_full   = load_dataframe(cfg.val_data,   cfg.max_val,   'Val',   cfg.seed)\n",
             "test_df_full  = pd.read_parquet(cfg.test_data) if cfg.test_data else None\n",
             "\n",
-            "val_proba_ifcnb = run_ifcnb(train_df_full, val_df_full, cfg, test_df=test_df_full)\n",
-            "print(f'val_proba_ifcnb: mean={val_proba_ifcnb.mean():.3f}')"
+            "val_proba_iflgbm = run_iflgbm(train_df_full, val_df_full, cfg, test_df=test_df_full)\n",
+            "print(f'val_proba_iflgbm: mean={val_proba_iflgbm.mean():.3f}')"
         ]
     },
     # ── Cell 8: Ensemble ─────────────────────────────────────────────────
@@ -229,40 +220,8 @@ CELLS = [
     {
         "type": "code",
         "source": [
-            "from ensemble import run_ensemble\n",
-            "from data_utils import load_dataframe\n",
-            "\n",
-            "# Load val labels (full)\n",
-            "val_full = load_dataframe(cfg.val_data, cfg.max_val, 'Val', cfg.seed)\n",
-            "y_val    = val_full['label'].values\n",
-            "\n",
-            "# Load test proba files\n",
-            "def load_npy(path):\n",
-            "    return np.load(path) if os.path.exists(path) else None\n",
-            "\n",
-            "test_gbm      = load_npy(os.path.join(cfg.output_dir, 'test_proba_gbm.npy'))\n",
-            "test_codebert = load_npy(os.path.join(cfg.output_dir, 'test_proba_codebert.npy'))\n",
-            "test_ifcnb    = load_npy(os.path.join(cfg.output_dir, 'test_proba_ifcnb.npy'))\n",
-            "\n",
-            "# Load test IDs\n",
-            "test_ids = None\n",
-            "if cfg.test_data and os.path.exists(cfg.test_data):\n",
-            "    test_df_tmp = pd.read_parquet(cfg.test_data)\n",
-            "    test_ids = test_df_tmp['ID'].tolist() if 'ID' in test_df_tmp.columns else list(range(len(test_df_tmp)))\n",
-            "\n",
-            "val_blend = run_ensemble(\n",
-            "    val_proba_gbm      = val_proba_gbm,\n",
-            "    val_proba_codebert = val_proba_codebert,\n",
-            "    val_proba_ifcnb    = val_proba_ifcnb,\n",
-            "    y_val              = y_val,\n",
-            "    test_proba_gbm     = test_gbm,\n",
-            "    test_proba_codebert= test_codebert,\n",
-            "    test_proba_ifcnb   = test_ifcnb,\n",
-            "    test_ids           = test_ids,\n",
-            "    output_dir         = cfg.output_dir,\n",
-            "    submission_out     = cfg.submission_out,\n",
-            ")\n",
-            "print(f'\\n✓ Submission → {cfg.submission_out}')"
+            "# Tạm thời tắt Ensemble\n",
+            "print('Bỏ qua Ensemble để tập trung tối ưu nhánh IF+LGBM.')\n"
         ]
     },
     # ── Cell 9: Summary ──────────────────────────────────────────────────
@@ -275,12 +234,13 @@ CELLS = [
         "source": [
             "from sklearn.metrics import f1_score\n",
             "from metrics import optimize_threshold\n",
+            "from data_utils import load_dataframe\n",
+            "\n",
+            "val_full = load_dataframe(cfg.val_data, cfg.max_val, 'Val', cfg.seed)\n",
+            "y_val    = val_full['label'].values\n",
             "\n",
             "results = {\n",
-            "    'GBM':      val_proba_gbm,\n",
-            "    'CodeBERT': val_proba_codebert,\n",
-            "    'IF+CNB':   val_proba_ifcnb,\n",
-            "    'Ensemble': val_blend,\n",
+            "    'IF+LGBM':   val_proba_iflgbm,\n",
             "}\n",
             "\n",
             "print('\\n' + '='*55)\n",
