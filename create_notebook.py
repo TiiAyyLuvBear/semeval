@@ -17,7 +17,7 @@ CELLS = [
             "1. OOD Diagnosis  (diag_shift.py)\n",
             "2. Feature Extraction  (feature_extractor.py)\n",
             "3. Train GBM Ensemble  (train_gbm.py)\n",
-            "4. Fine-tune CodeBERT  (train_codebert.py)\n",
+            "4. Train Raw-Text SVM  (train_svm.py)\n",
             "5. Train IF+CNB  (train_ifcnb.py)\n",
             "6. Train TF-IDF Textual Specialist (train_tfidf.py)\n",
             "7. Soft-Voting Ensemble  (ensemble.py)\n",
@@ -173,18 +173,19 @@ CELLS = [
             "# gbm_tau, val_proba_gbm = run_gbm(train_feat_path=TRAIN_FEAT, val_feat_path=VAL_FEAT, cfg=cfg, test_feat_path=TEST_FEAT)\n"
         ]
     },
-    # ── Cell 6: Fine-tune CodeBERT ───────────────────────────────────────
+    # ── Cell 6: Train Raw-Text SVM ───────────────────────────────────────
     {
         "type": "markdown",
-        "source": ["## 4. Fine-tune CodeBERT\n",
-                   "microsoft/codebert-base với Trainer API. Early stopping trên Macro F1.\n"]
+        "source": ["## 4. Train Raw-Text SVM (Fast Alternative to CodeBERT)\n",
+                   "Sử dụng TF-IDF (word n-grams 1-3) trên raw code và LinearSVC. Chạy cực nhanh, thay thế CodeBERT.\n"]
     },
     {
         "type": "code",
         "source": [
-            "# Tạm thời tắt CodeBERT\n",
-            "# from train_codebert import run_codebert\n",
-            "# codebert_tau, val_proba_codebert = run_codebert(cfg)\n"
+            "from train_svm import run_svm\n",
+            "\n",
+            "val_proba_svm = run_svm(train_df_full, val_df_full, cfg, test_df=test_df_full)\n",
+            "print(f'val_proba_svm: mean={val_proba_svm.mean():.3f}')"
         ]
     },
     # ── Cell 7: Train IF+CNB ─────────────────────────────────────────────
@@ -237,6 +238,7 @@ CELLS = [
             "val_proba_ensemble = run_ensemble(\n",
             "    val_proba_ifcnb=val_proba_iflgbm,\n",
             "    val_proba_tfidf=val_proba_tfidf,\n",
+            "    val_proba_svm=val_proba_svm,\n",
             "    y_val=val_df_full['label'].values,\n",
             "    val_codes=val_df_full['code'],\n",
             ")"
@@ -260,6 +262,7 @@ CELLS = [
             "results = {\n",
             "    'IF+LGBM':   val_proba_iflgbm,\n",
             "    'TF-IDF':    val_proba_tfidf,\n",
+            "    'SVM':       val_proba_svm,\n",
             "    'Ensemble':  val_proba_ensemble,\n",
             "}\n",
             "\n",

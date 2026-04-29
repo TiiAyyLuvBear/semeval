@@ -109,12 +109,14 @@ def apply_language_routing(proba: np.ndarray, codes: pd.Series) -> np.ndarray:
 def run_ensemble(
     val_proba_gbm:     np.ndarray | None = None,
     val_proba_codebert: np.ndarray | None = None,
+    val_proba_svm:     np.ndarray | None = None,
     val_proba_ifcnb:   np.ndarray | None = None,
     val_proba_tfidf:   np.ndarray | None = None,
     y_val:             np.ndarray = None,
     val_codes:         pd.Series | None = None,
     test_proba_gbm:     np.ndarray | None = None,
     test_proba_codebert: np.ndarray | None = None,
+    test_proba_svm:     np.ndarray | None = None,
     test_proba_ifcnb:   np.ndarray | None = None,
     test_proba_tfidf:   np.ndarray | None = None,
     test_codes:         pd.Series | None = None,
@@ -137,6 +139,7 @@ def run_ensemble(
     proba_dict = {}
     if val_proba_gbm is not None: proba_dict["gbm"] = val_proba_gbm
     if val_proba_codebert is not None: proba_dict["codebert"] = val_proba_codebert
+    if val_proba_svm is not None: proba_dict["svm"] = val_proba_svm
     if val_proba_ifcnb is not None: proba_dict["ifcnb"] = val_proba_ifcnb
     if val_proba_tfidf is not None: proba_dict["tfidf"] = val_proba_tfidf
     
@@ -191,6 +194,7 @@ def run_ensemble(
     test_proba_dict = {}
     if test_proba_gbm is not None: test_proba_dict["gbm"] = test_proba_gbm
     if test_proba_codebert is not None: test_proba_dict["codebert"] = test_proba_codebert
+    if test_proba_svm is not None: test_proba_dict["svm"] = test_proba_svm
     if test_proba_ifcnb is not None: test_proba_dict["ifcnb"] = test_proba_ifcnb
     if test_proba_tfidf is not None: test_proba_dict["tfidf"] = test_proba_tfidf
     
